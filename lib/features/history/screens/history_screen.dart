@@ -248,12 +248,12 @@ class _FilterBar extends StatelessWidget {
     final bg = isDark ? AppColors.darkSurface : AppColors.grey100;
 
     return Container(
-      height: 44,
+      height: 56,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: 6,
+          vertical: 8,
         ),
         children: _filters.map((f) {
           final (action, label) = f;
@@ -263,7 +263,7 @@ class _FilterBar extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               margin: const EdgeInsets.only(right: AppSpacing.sm),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 2),
               decoration: BoxDecoration(
                 color: isActive ? onSurface : bg,
                 borderRadius: BorderRadius.circular(16),
@@ -272,7 +272,7 @@ class _FilterBar extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: isActive
                         ? (isDark ? AppColors.darkBg : AppColors.white)
