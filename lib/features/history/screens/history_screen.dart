@@ -42,8 +42,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final s = ref.watch(stringsProvider);
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
-    final divColor = Theme.of(context).dividerColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final divColor = isDark ? AppColors.darkDivider : AppColors.grey200;
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -62,6 +62,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Row(
                   children: [
+                    Expanded(child: SizedBox()),
                     Text(
                       s.history,
                       style: AppTextStyles.titleLarge.copyWith(
@@ -69,17 +70,22 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const Spacer(),
-                    if (state.items.isNotEmpty)
-                      CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () => _confirmClearAll(context),
-                        child: Icon(
-                          CupertinoIcons.trash,
-                          color: AppColors.errorRed,
-                          size: 20,
-                        ),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: state.items.isNotEmpty
+                            ? CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: () => _confirmClearAll(context),
+                                child: Icon(
+                                  CupertinoIcons.trash,
+                                  color: AppColors.errorRed,
+                                  size: 20,
+                                ),
+                              )
+                            : const SizedBox(width: 44),
                       ),
+                    ),
                   ],
                 ),
               ),

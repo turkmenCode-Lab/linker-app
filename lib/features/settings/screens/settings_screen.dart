@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/settings_provider.dart';
-import 'package:flutter/services.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../editor/providers/editor_controller.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -15,7 +16,7 @@ class SettingsScreen extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
-    final autoCopy = settings.autoCopy;
+    final editorCtrl = ref.read(editorControllerProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.darkBg : AppColors.white;
     final cardBg = isDark ? AppColors.darkSurface : AppColors.grey100;
@@ -26,7 +27,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: bg,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
+        preferredSize: const Size.fromHeight(56),
         child: Container(
           decoration: BoxDecoration(
             color: bg.withOpacity(0.92),
@@ -35,7 +36,7 @@ class SettingsScreen extends ConsumerWidget {
           child: SafeArea(
             bottom: false,
             child: SizedBox(
-              height: 64,
+              height: 56,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 child: Row(
@@ -59,9 +60,11 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.lg,
+        padding: const EdgeInsets.only(
+          left: AppSpacing.lg,
+          right: AppSpacing.md,
+          top: AppSpacing.lg,
+          bottom: 100,
         ),
         children: [
           _SectionLabel(label: s.appearance, color: subColor),
@@ -98,10 +101,114 @@ class SettingsScreen extends ConsumerWidget {
                 subLabel: s.autoCopySubtitle,
                 textColor: textColor,
                 subColor: subColor,
-                value: autoCopy,
+                value: settings.autoCopy,
                 onChanged: (v) => notifier.setAutoCopy(v),
               ),
+              _ToggleRow(
+                label: s.formatOnExport,
+                subLabel: s.formatOnExportSubtitle,
+                textColor: textColor,
+                subColor: subColor,
+                value: settings.formatOnExport,
+                onChanged: (v) => notifier.setFormatOnExport(v),
+              ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _SectionLabel(label: s.editor, color: subColor),
+          const SizedBox(height: AppSpacing.sm),
+          _Card(
+            bg: cardBg,
+            divColor: divColor,
+            children: [
+              _ActionRow(
+                label: s.formatJson,
+                icon: CupertinoIcons.textformat,
+                textColor: textColor,
+                onTap: () {
+                  editorCtrl.formatJson();
+                  context.pop();
+                },
+              ),
+              _ActionRow(
+                label: s.minifyJson,
+                icon: CupertinoIcons.minus,
+                textColor: textColor,
+                onTap: () {
+                  editorCtrl.minifyJson();
+                  context.pop();
+                },
+              ),
+              _ActionRow(
+                label: s.clearEditor,
+                icon: CupertinoIcons.trash,
+                textColor: AppColors.errorRed,
+                onTap: () => _confirmClear(context, ref),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          _Card(
+            bg: cardBg,
+            divColor: divColor,
+            children: [
+              _ActionRow(
+                label: s.signOut,
+                icon: CupertinoIcons.square_arrow_left,
+                textColor: AppColors.errorRed,
+                onTap: () => _confirmSignOut(context, ref),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
+      ),
+    );
+  }
+
+  void _confirmClear(BuildContext context, WidgetRef ref) {
+    showCupertinoDialog(
+      context: context,
+      builder: (_) => CupertinoAlertDialog(
+        title: const Text('Clear Editor'),
+        content: const Text('This will erase everything in the editor.'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context);
+              ref.read(editorControllerProvider.notifier).clearEditor();
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmSignOut(BuildContext context, WidgetRef ref) {
+    showCupertinoDialog(
+      context: context,
+      builder: (_) => CupertinoAlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(context);
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) context.go('/auth');
+            },
+            child: const Text('Sign Out'),
           ),
         ],
       ),
@@ -165,13 +272,58 @@ class _Card extends StatelessWidget {
   }
 }
 
+class _ActionRow extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color textColor;
+  final VoidCallback onTap;
+  const _ActionRow({
+    required this.label,
+    required this.icon,
+    required this.textColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: textColor),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              label,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              CupertinoIcons.chevron_right,
+              size: 14,
+              color: textColor.withOpacity(0.3),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ThemeRow extends StatelessWidget {
   final String label;
   final Color textColor;
   final ThemeMode current;
   final AppStrings strings;
   final void Function(ThemeMode) onChanged;
-
   const _ThemeRow({
     required this.label,
     required this.textColor,
@@ -278,7 +430,6 @@ class _LanguageRow extends StatelessWidget {
   final Color subColor;
   final AppLocale current;
   final void Function(AppLocale) onChanged;
-
   const _LanguageRow({
     required this.label,
     required this.textColor,
@@ -335,7 +486,6 @@ class _LanguageRow extends StatelessWidget {
   void _showPicker(BuildContext context, bool isDark) {
     final bg = isDark ? AppColors.darkSurface : AppColors.white;
     final textColor = isDark ? AppColors.darkText : AppColors.black;
-    final subColor = isDark ? AppColors.darkTextSecondary : AppColors.grey600;
     final divColor = isDark ? AppColors.darkDivider : AppColors.grey200;
 
     showModalBottomSheet(
@@ -398,19 +548,14 @@ class _LanguageRow extends StatelessWidget {
                           children: [
                             Text(flag, style: const TextStyle(fontSize: 24)),
                             const SizedBox(width: AppSpacing.md),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name,
-                                  style: AppTextStyles.bodyLarge.copyWith(
-                                    color: textColor,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              name,
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                color: textColor,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
                             ),
                             const Spacer(),
                             if (isSelected)
@@ -449,7 +594,6 @@ class _ToggleRow extends StatelessWidget {
   final Color subColor;
   final bool value;
   final void Function(bool) onChanged;
-
   const _ToggleRow({
     required this.label,
     required this.subLabel,

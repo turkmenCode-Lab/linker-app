@@ -2,9 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/editor_controller.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../settings/providers/settings_provider.dart';
 
@@ -35,9 +33,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     _syncingController = true;
     final selection = _jsonCtrl.selection;
     _jsonCtrl.text = raw;
-    if (selection.start <= raw.length) {
-      _jsonCtrl.selection = selection;
-    }
+    if (selection.start <= raw.length) _jsonCtrl.selection = selection;
     _syncingController = false;
   }
 
@@ -47,15 +43,18 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     final ctrl = ref.read(editorControllerProvider.notifier);
     final s = ref.watch(stringsProvider);
 
-    ref.listen(editorControllerProvider, (_, next) {
-      _syncFromState(next.rawJson);
-    });
+    ref.listen(
+      editorControllerProvider,
+      (_, next) => _syncFromState(next.rawJson),
+    );
 
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
-    final divColor = Theme.of(context).dividerColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final divColor = isDark ? AppColors.darkDivider : AppColors.grey200;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: scaffoldBg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56),
@@ -72,11 +71,15 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Row(
                   children: [
-                    _StatusIndicator(
-                      isValid: state.isValid,
-                      isDirty: state.isDirty,
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: _StatusIndicator(
+                          isValid: state.isValid,
+                          isDirty: state.isDirty,
+                        ),
+                      ),
                     ),
-                    const Spacer(),
                     Text(
                       'linker',
                       style: AppTextStyles.titleLarge.copyWith(
@@ -84,16 +87,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const Spacer(),
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => _showSettings(context),
-                      child: Icon(
-                        CupertinoIcons.ellipsis_circle,
-                        color: onSurface,
-                        size: 22,
-                      ),
-                    ),
+                    const Expanded(child: SizedBox()),
                   ],
                 ),
               ),
@@ -138,100 +132,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       ),
     );
   }
-
-  void _showSettings(BuildContext context) {
-    final s = ref.read(stringsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.darkSurface : AppColors.white;
-    final textColor = isDark ? AppColors.darkText : AppColors.black;
-    final divColor = isDark ? AppColors.darkDivider : AppColors.grey200;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: bg,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: textColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(
-                  bottom: AppSpacing.sm,
-                  left: AppSpacing.md,
-                  right: AppSpacing.md,
-                ),
-                child: Text(
-                  s.options,
-                  style: AppTextStyles.titleMedium.copyWith(color: textColor),
-                ),
-              ),
-              Divider(color: divColor, height: 1),
-              _SheetAction(
-                label: s.formatJson,
-                icon: CupertinoIcons.textformat,
-                textColor: textColor,
-                divColor: divColor,
-                onTap: () {
-                  Navigator.pop(context);
-                  ref.read(editorControllerProvider.notifier).formatJson();
-                },
-              ),
-              _SheetAction(
-                label: s.minifyJson,
-                icon: CupertinoIcons.minus,
-                textColor: textColor,
-                divColor: divColor,
-                onTap: () {
-                  Navigator.pop(context);
-                  ref.read(editorControllerProvider.notifier).minifyJson();
-                },
-              ),
-              _SheetAction(
-                label: s.clearEditor,
-                icon: CupertinoIcons.trash,
-                textColor: AppColors.errorRed,
-                divColor: divColor,
-                onTap: () {
-                  Navigator.pop(context);
-                  ref.read(editorControllerProvider.notifier).clearEditor();
-                },
-              ),
-              _SheetAction(
-                label: s.signOut,
-                icon: CupertinoIcons.square_arrow_left,
-                textColor: AppColors.errorRed,
-                divColor: Colors.transparent,
-                onTap: () async {
-                  Navigator.pop(context);
-                  await ref.read(authProvider.notifier).logout();
-                  if (mounted) context.go('/auth');
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _TabBar extends ConsumerWidget {
   final EditorTab activeTab;
   final void Function(EditorTab) onTabChanged;
-
   const _TabBar({required this.activeTab, required this.onTabChanged});
 
   @override
@@ -283,7 +188,6 @@ class _Tab extends StatelessWidget {
   final IconData icon;
   final bool isActive;
   final VoidCallback onTap;
-
   const _Tab({
     required this.label,
     required this.icon,
@@ -293,6 +197,7 @@ class _Tab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -300,16 +205,12 @@ class _Tab extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           decoration: BoxDecoration(
-            color: isActive
-                ? Theme.of(context).colorScheme.surface
-                : Colors.transparent,
+            color: isActive ? c.surface : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.08),
+                      color: c.onSurface.withOpacity(0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -322,19 +223,13 @@ class _Tab extends StatelessWidget {
               Icon(
                 icon,
                 size: 14,
-                color: isActive
-                    ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
+                color: isActive ? c.onSurface : c.onSurface.withOpacity(0.35),
               ),
               const SizedBox(width: 4),
               Text(
                 label,
                 style: AppTextStyles.caption.copyWith(
-                  color: isActive
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.35),
+                  color: isActive ? c.onSurface : c.onSurface.withOpacity(0.35),
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
@@ -350,7 +245,6 @@ class _EditorPanel extends ConsumerWidget {
   final TextEditingController controller;
   final EditorState state;
   final EditorController editorCtrl;
-
   const _EditorPanel({
     super.key,
     required this.controller,
@@ -364,9 +258,15 @@ class _EditorPanel extends ConsumerWidget {
       children: [
         _EditorToolbar(state: state, editorCtrl: editorCtrl),
         if (state.jsonError != null) _JsonErrorBar(error: state.jsonError!),
+        _ConvertToLinkBar(state: state, editorCtrl: editorCtrl),
         Expanded(
           child: Container(
-            margin: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
             decoration: BoxDecoration(
               color: Theme.of(
                 context,
@@ -409,8 +309,6 @@ class _EditorPanel extends ConsumerWidget {
             ),
           ),
         ),
-        if (state.isValid)
-          _ConvertToLinkBar(state: state, editorCtrl: editorCtrl),
       ],
     );
   }
@@ -419,7 +317,6 @@ class _EditorPanel extends ConsumerWidget {
 class _EditorToolbar extends ConsumerWidget {
   final EditorState state;
   final EditorController editorCtrl;
-
   const _EditorToolbar({required this.state, required this.editorCtrl});
 
   @override
@@ -490,9 +387,7 @@ class _EditorToolbar extends ConsumerWidget {
               enabled: true,
               onTap: () async {
                 final data = await Clipboard.getData(Clipboard.kTextPlain);
-                if (data?.text != null) {
-                  editorCtrl.updateJson(data!.text!);
-                }
+                if (data?.text != null) editorCtrl.updateJson(data!.text!);
               },
             ),
           ),
@@ -507,7 +402,6 @@ class _ToolBtn extends StatelessWidget {
   final String label;
   final bool enabled;
   final VoidCallback onTap;
-
   const _ToolBtn({
     required this.icon,
     required this.label,
@@ -527,7 +421,6 @@ class _ToolBtn extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(icon, size: 17, color: color),
               const SizedBox(height: 3),
@@ -589,17 +482,21 @@ class _JsonErrorBar extends StatelessWidget {
 class _ConvertToLinkBar extends ConsumerWidget {
   final EditorState state;
   final EditorController editorCtrl;
-
   const _ConvertToLinkBar({required this.state, required this.editorCtrl});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
+          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
         ),
       ),
       child: Column(
@@ -630,9 +527,8 @@ class _ConvertToLinkBar extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.sm),
                   CupertinoButton(
                     padding: EdgeInsets.zero,
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: state.link!));
-                    },
+                    onPressed: () =>
+                        Clipboard.setData(ClipboardData(text: state.link!)),
                     child: Icon(
                       CupertinoIcons.doc_on_clipboard,
                       size: 18,
@@ -645,21 +541,47 @@ class _ConvertToLinkBar extends ConsumerWidget {
               ),
             ),
           ],
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: state.isBusy ? null : editorCtrl.convertConfigToLink,
-              icon: state.operation == EditorOperation.converting
-                  ? SizedBox(
-                      height: 16,
-                      width: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    )
-                  : const Icon(CupertinoIcons.link, size: 16),
-              label: Text(s.exportAsLink),
+          AnimatedOpacity(
+            opacity: state.isValid ? 1.0 : 0.3,
+            duration: const Duration(milliseconds: 200),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: (state.isBusy || !state.isValid)
+                    ? null
+                    : editorCtrl.convertConfigToLink,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                  foregroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black
+                      : Colors.white,
+                  disabledBackgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                  disabledForegroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black
+                      : Colors.white,
+                ),
+                icon: state.operation == EditorOperation.converting
+                    ? SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.black
+                              : Colors.white,
+                        ),
+                      )
+                    : const Icon(CupertinoIcons.link, size: 16),
+                label: Text(s.exportAsLink),
+              ),
             ),
           ),
         ],
@@ -672,7 +594,6 @@ class _LinkConverterPanel extends ConsumerWidget {
   final TextEditingController linkCtrl;
   final EditorState state;
   final EditorController editorCtrl;
-
   const _LinkConverterPanel({
     super.key,
     required this.linkCtrl,
@@ -683,6 +604,7 @@ class _LinkConverterPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
+    final c = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -690,15 +612,13 @@ class _LinkConverterPanel extends ConsumerWidget {
         children: [
           Text(
             s.pasteLink,
-            style: AppTextStyles.titleMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: AppTextStyles.titleMedium.copyWith(color: c.onSurface),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             s.supportedProtocols,
             style: AppTextStyles.caption.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: c.onSurface.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -706,16 +626,14 @@ class _LinkConverterPanel extends ConsumerWidget {
             controller: linkCtrl,
             style: AppTextStyles.mono.copyWith(
               fontSize: 13,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: c.onSurface,
             ),
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'vless://uuid@host:443?...',
               hintStyle: AppTextStyles.mono.copyWith(
                 fontSize: 13,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withOpacity(0.35),
+                color: c.onSurface.withOpacity(0.35),
               ),
             ),
           ),
@@ -738,7 +656,7 @@ class _LinkConverterPanel extends ConsumerWidget {
                       width: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: c.onPrimary,
                       ),
                     )
                   : const Icon(CupertinoIcons.arrow_right, size: 16),
@@ -746,7 +664,7 @@ class _LinkConverterPanel extends ConsumerWidget {
             ),
           ),
           const Spacer(),
-          _SupportedProtocols(),
+          const _SupportedProtocols(),
         ],
       ),
     );
@@ -794,7 +712,6 @@ class _BulkImportPanel extends ConsumerWidget {
   final TextEditingController bulkCtrl;
   final EditorState state;
   final EditorController editorCtrl;
-
   const _BulkImportPanel({
     super.key,
     required this.bulkCtrl,
@@ -805,6 +722,7 @@ class _BulkImportPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
+    final c = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -812,15 +730,13 @@ class _BulkImportPanel extends ConsumerWidget {
         children: [
           Text(
             s.bulkImportTitle,
-            style: AppTextStyles.titleMedium.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: AppTextStyles.titleMedium.copyWith(color: c.onSurface),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             s.bulkImportSubtitle,
             style: AppTextStyles.caption.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: c.onSurface.withOpacity(0.5),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -829,7 +745,7 @@ class _BulkImportPanel extends ConsumerWidget {
               controller: bulkCtrl,
               style: AppTextStyles.mono.copyWith(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: c.onSurface,
               ),
               maxLines: null,
               expands: true,
@@ -838,9 +754,7 @@ class _BulkImportPanel extends ConsumerWidget {
                 hintText: 'vless://...\nvmess://...\ntrojan://...',
                 hintStyle: AppTextStyles.mono.copyWith(
                   fontSize: 12,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withOpacity(0.35),
+                  color: c.onSurface.withOpacity(0.35),
                 ),
               ),
             ),
@@ -867,7 +781,7 @@ class _BulkImportPanel extends ConsumerWidget {
                       width: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.onPrimary,
+                        color: c.onPrimary,
                       ),
                     )
                   : const Icon(CupertinoIcons.square_stack, size: 16),
@@ -919,7 +833,6 @@ class _StatChip extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
-
   const _StatChip({
     required this.label,
     required this.count,
@@ -950,7 +863,6 @@ class _StatChip extends StatelessWidget {
 class _StatusIndicator extends StatelessWidget {
   final bool isValid;
   final bool isDirty;
-
   const _StatusIndicator({required this.isValid, required this.isDirty});
 
   @override
@@ -1004,7 +916,6 @@ class _StatusIndicator extends StatelessWidget {
 class _ApiErrorBanner extends StatelessWidget {
   final String error;
   final VoidCallback onDismiss;
-
   const _ApiErrorBanner({required this.error, required this.onDismiss});
 
   @override
@@ -1041,152 +952,6 @@ class _ApiErrorBanner extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SheetAction extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color textColor;
-  final Color divColor;
-  final VoidCallback onTap;
-
-  const _SheetAction({
-    required this.label,
-    required this.icon,
-    required this.textColor,
-    required this.divColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md + 2,
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: textColor),
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                  label,
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (divColor != Colors.transparent)
-          Divider(
-            color: divColor,
-            height: 1,
-            indent: AppSpacing.lg + 20 + AppSpacing.md,
-          ),
-      ],
-    );
-  }
-}
-
-class _BottomShell extends StatelessWidget {
-  final VoidCallback onSubscription;
-  final VoidCallback onSettings;
-  final VoidCallback onOptions;
-
-  const _BottomShell({
-    required this.onSubscription,
-    required this.onSettings,
-    required this.onOptions,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final bg = Theme.of(context).scaffoldBackgroundColor;
-    final divColor = Theme.of(context).dividerColor;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border(top: BorderSide(color: divColor, width: 0.5)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 52,
-          child: Row(
-            children: [
-              _ShellBtn(
-                icon: CupertinoIcons.antenna_radiowaves_left_right,
-                label: 'Sub',
-                onTap: onSubscription,
-                color: onSurface,
-              ),
-              _ShellBtn(
-                icon: CupertinoIcons.settings,
-                label: 'Settings',
-                onTap: onSettings,
-                color: onSurface,
-              ),
-              _ShellBtn(
-                icon: CupertinoIcons.ellipsis_circle,
-                label: 'Options',
-                onTap: onOptions,
-                color: onSurface,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ShellBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final Color color;
-
-  const _ShellBtn({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
-                color: color.withOpacity(0.6),
-                height: 1,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

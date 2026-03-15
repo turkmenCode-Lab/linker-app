@@ -64,28 +64,24 @@ class _FloatingPill extends StatelessWidget {
         children: [
           _PillTab(
             icon: CupertinoIcons.doc_text,
-            label: 'Editor',
             isActive: location == '/editor',
             isDark: isDark,
             onTap: () => context.go('/editor'),
           ),
           _PillTab(
             icon: CupertinoIcons.antenna_radiowaves_left_right,
-            label: 'Sub',
             isActive: location == '/subscription',
             isDark: isDark,
             onTap: () => context.go('/subscription'),
           ),
           _PillTab(
             icon: CupertinoIcons.time,
-            label: 'History',
             isActive: location == '/history',
             isDark: isDark,
             onTap: () => context.go('/history'),
           ),
           _PillTab(
             icon: CupertinoIcons.settings,
-            label: 'Settings',
             isActive: location == '/settings',
             isDark: isDark,
             onTap: () => context.go('/settings'),
@@ -98,14 +94,13 @@ class _FloatingPill extends StatelessWidget {
 
 class _PillTab extends StatelessWidget {
   final IconData icon;
-  final String label;
+
   final bool isActive;
   final bool isDark;
   final VoidCallback onTap;
 
   const _PillTab({
     required this.icon,
-    required this.label,
     required this.isActive,
     required this.isDark,
     required this.onTap,
@@ -141,20 +136,9 @@ class _PillTab extends StatelessWidget {
                 child: Icon(
                   icon,
                   key: ValueKey(isActive),
-                  size: isActive ? 22 : 20,
+                  size: isActive ? 25 : 24,
                   color: isActive ? activeColor : inactiveColor,
                 ),
-              ),
-              const SizedBox(height: 3),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 180),
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                  color: isActive ? activeColor : inactiveColor,
-                  height: 1,
-                ),
-                child: Text(label),
               ),
             ],
           ),

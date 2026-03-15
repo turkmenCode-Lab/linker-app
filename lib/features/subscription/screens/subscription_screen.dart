@@ -37,12 +37,12 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final onSurface = Theme.of(context).colorScheme.onSurface;
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
-    final divColor = Theme.of(context).dividerColor;
+    final divColor = isDark ? AppColors.darkDivider : AppColors.grey200;
 
     return Scaffold(
       backgroundColor: scaffoldBg,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
+        preferredSize: const Size.fromHeight(56),
         child: Container(
           decoration: BoxDecoration(
             color: scaffoldBg.withOpacity(0.92),
@@ -51,7 +51,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
           child: SafeArea(
             bottom: false,
             child: SizedBox(
-              height: 64,
+              height: 56,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 child: Row(

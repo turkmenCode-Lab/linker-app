@@ -8,27 +8,32 @@ import '../../../core/l10n/app_strings.dart';
 const _kThemeKey = 'settings_theme_mode';
 const _kLocaleKey = 'settings_locale';
 const _kAutoCopyKey = 'settings_auto_copy';
+const _kFormatOnExportKey = 'settings_format_on_export';
 
 class SettingsState {
   final ThemeMode themeMode;
   final AppLocale locale;
   final bool autoCopy;
+  final bool formatOnExport;
 
   const SettingsState({
     this.themeMode = ThemeMode.system,
     this.locale = AppLocale.en,
     this.autoCopy = true,
+    this.formatOnExport = false,
   });
 
   SettingsState copyWith({
     ThemeMode? themeMode,
     AppLocale? locale,
     bool? autoCopy,
+    bool? formatOnExport,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       locale: locale ?? this.locale,
       autoCopy: autoCopy ?? this.autoCopy,
+      formatOnExport: formatOnExport ?? this.formatOnExport,
     );
   }
 }
@@ -55,11 +60,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           )
         : _deviceLocale();
 
-    final autoCopy = _prefs.getBool(_kAutoCopyKey) ?? true;
     state = SettingsState(
       themeMode: themeMode,
       locale: locale,
-      autoCopy: autoCopy,
+      autoCopy: _prefs.getBool(_kAutoCopyKey) ?? true,
+      formatOnExport: _prefs.getBool(_kFormatOnExportKey) ?? false,
     );
   }
 
@@ -86,6 +91,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     await _prefs.setBool(_kAutoCopyKey, value);
     state = state.copyWith(autoCopy: value);
   }
+
+  Future<void> setFormatOnExport(bool value) async {
+    await _prefs.setBool(_kFormatOnExportKey, value);
+    state = state.copyWith(formatOnExport: value);
+  }
 }
 
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
@@ -110,4 +120,8 @@ final themeModeProvider = Provider<ThemeMode>((ref) {
 
 final autoCopyProvider = Provider<bool>((ref) {
   return ref.watch(settingsProvider.select((s) => s.autoCopy));
+});
+
+final formatOnExportProvider = Provider<bool>((ref) {
+  return ref.watch(settingsProvider.select((s) => s.formatOnExport));
 });

@@ -57,6 +57,9 @@ abstract class AppStrings {
   String get subscriptionHint;
   String get autoCopy;
   String get autoCopySubtitle;
+  String get formatOnExport;
+  String get formatOnExportSubtitle;
+  String get account;
   String get undo;
   String get redo;
   String get paste;
@@ -116,6 +119,10 @@ class _En extends AppStrings {
   String get autoCopy => 'Auto Copy';
   String get autoCopySubtitle =>
       'Copy config to clipboard after link conversion';
+  String get formatOnExport => 'Format on Export';
+  String get formatOnExportSubtitle =>
+      'Auto-format JSON before exporting as link';
+  String get account => 'Account';
   String get undo => 'Undo';
   String get redo => 'Redo';
   String get paste => 'Paste';
@@ -174,6 +181,10 @@ class _Ru extends AppStrings {
   String get subscriptionHint => 'Вставьте ссылку на подписку и нажмите кнопку';
   String get autoCopy => 'Авто-копирование';
   String get autoCopySubtitle => 'Копировать конфиг в буфер после конвертации';
+  String get formatOnExport => 'Форматировать при экспорте';
+  String get formatOnExportSubtitle =>
+      'Авто-форматировать JSON перед экспортом';
+  String get account => 'Аккаунт';
   String get undo => 'Назад';
   String get redo => 'Вперёд';
   String get paste => 'Вставь';
@@ -232,6 +243,10 @@ class _Tk extends AppStrings {
   String get subscriptionHint => 'Abunalyk salgysyny goýuň we ýükläň';
   String get autoCopy => 'Awtomatik göçürme';
   String get autoCopySubtitle => 'Öwürmeden soň konfigi sahna göçür';
+  String get formatOnExport => 'Eksportda formatla';
+  String get formatOnExportSubtitle =>
+      'Salgy hökmünde eksportdan öň JSON formatla';
+  String get account => 'Hasap';
   String get undo => 'Yza';
   String get redo => 'Öňe';
   String get paste => 'Goý';
