@@ -89,6 +89,8 @@ class HistoryState {
 
   bool get hasMore => page < pages;
 
+  static const _keep = Object();
+
   HistoryState copyWith({
     List<HistoryItem>? items,
     bool? isLoading,
@@ -97,9 +99,8 @@ class HistoryState {
     int? page,
     int? total,
     int? pages,
-    String? filterAction,
+    Object? filterAction = _keep,
     bool clearError = false,
-    bool clearFilter = false,
   }) => HistoryState(
     items: items ?? this.items,
     isLoading: isLoading ?? this.isLoading,
@@ -108,7 +109,9 @@ class HistoryState {
     page: page ?? this.page,
     total: total ?? this.total,
     pages: pages ?? this.pages,
-    filterAction: clearFilter ? null : filterAction ?? this.filterAction,
+    filterAction: identical(filterAction, _keep)
+        ? this.filterAction
+        : filterAction as String?,
   );
 }
 
@@ -117,20 +120,22 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
 
   HistoryNotifier(this._dio) : super(const HistoryState());
 
-  Future<void> load({String? action}) async {
+  Future<void> load({String? action, bool clearFilter = false}) async {
+    final effectiveFilter = clearFilter ? null : action;
+
     state = state.copyWith(
       isLoading: true,
       clearError: true,
-      filterAction: action,
-      clearFilter: action == null,
+      filterAction: effectiveFilter,
     );
+
     try {
       final res = await _dio.get(
         AppConfig.history,
         queryParameters: {
           'page': 1,
           'limit': 20,
-          if (action != null) 'action': action,
+          if (effectiveFilter != null) 'action': effectiveFilter,
         },
       );
       final data = res.data as Map<String, dynamic>;
@@ -150,15 +155,19 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
 
   Future<void> loadMore() async {
     if (!state.hasMore || state.isLoadingMore) return;
+
     state = state.copyWith(isLoadingMore: true);
+
     try {
       final nextPage = state.page + 1;
+      final currentFilter = state.filterAction;
+
       final res = await _dio.get(
         AppConfig.history,
         queryParameters: {
           'page': nextPage,
           'limit': 20,
-          if (state.filterAction != null) 'action': state.filterAction,
+          if (currentFilter != null) 'action': currentFilter,
         },
       );
       final data = res.data as Map<String, dynamic>;
@@ -199,7 +208,13 @@ class HistoryNotifier extends StateNotifier<HistoryState> {
     }
   }
 
-  void setFilter(String? action) => load(action: action);
+  void setFilter(String? action) {
+    if (action == null) {
+      load(clearFilter: true);
+    } else {
+      load(action: action);
+    }
+  }
 
   String _parseError(DioException e) {
     if (e.response != null) return 'Server error ${e.response?.statusCode}';

@@ -105,49 +105,48 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                   )
                 : state.items.isEmpty
-                    ? _EmptyState(onSurface: onSurface)
-                    : RefreshIndicator(
-                        color: onSurface,
-                        onRefresh: () => ref
-                            .read(historyProvider.notifier)
-                            .load(action: state.filterAction),
-                        child: ListView.separated(
-                          controller: _scrollCtrl,
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.md,
-                            AppSpacing.md,
-                            AppSpacing.md,
-                            100,
-                          ),
-                          itemCount: state.items.length +
-                              (state.isLoadingMore ? 1 : 0),
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (_, i) {
-                            if (i == state.items.length) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.all(AppSpacing.md),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    color: onSurface,
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              );
-                            }
-                            final item = state.items[i];
-                            return _HistoryCard(
-                              item: item,
-                              isDark: isDark,
-                              onDelete: () => ref
-                                  .read(historyProvider.notifier)
-                                  .deleteOne(item.id),
-                              onUse: () => _onUse(context, item),
-                            );
-                          },
-                        ),
+                ? _EmptyState(onSurface: onSurface)
+                : RefreshIndicator(
+                    color: onSurface,
+                    onRefresh: () => ref
+                        .read(historyProvider.notifier)
+                        .load(action: state.filterAction),
+                    child: ListView.separated(
+                      controller: _scrollCtrl,
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        100,
                       ),
+                      itemCount:
+                          state.items.length + (state.isLoadingMore ? 1 : 0),
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (_, i) {
+                        if (i == state.items.length) {
+                          return Padding(
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: onSurface,
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        }
+                        final item = state.items[i];
+                        return _HistoryCard(
+                          item: item,
+                          isDark: isDark,
+                          onDelete: () => ref
+                              .read(historyProvider.notifier)
+                              .deleteOne(item.id),
+                          onUse: () => _onUse(context, item),
+                        );
+                      },
+                    ),
+                  ),
           ),
         ],
       ),
@@ -164,10 +163,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         text = item.output['link'] as String? ?? '';
         break;
       case kActionBulkImport:
-        final links = (item.output['imported'] as List?)
-            ?.map((c) => (c as Map)['remarks'] ?? '')
-            .join('\n') ?? '';
-        text = links;
+        final configs = item.output['imported'] as List? ?? [];
+        text = configs
+            .map((c) {
+              final config = c as Map?;
+              return config?['link'] as String? ??
+                  config?['remarks'] as String? ??
+                  '';
+            })
+            .where((s) => s.isNotEmpty)
+            .join('\n');
         break;
       case kActionSubscription:
         text = item.input['url'] as String? ?? '';
@@ -331,7 +336,9 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final cardBg = Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4);
+    final cardBg = Theme.of(
+      context,
+    ).colorScheme.surfaceContainerHighest.withOpacity(0.4);
     final divColor = Theme.of(context).dividerColor;
     final actionColor = _actionColors[item.action] ?? onSurface;
 
@@ -340,12 +347,12 @@ class _HistoryCard extends StatelessWidget {
     final timeLabel = diff.inMinutes < 1
         ? 'just now'
         : diff.inHours < 1
-            ? '${diff.inMinutes}m ago'
-            : diff.inDays < 1
-                ? '${diff.inHours}h ago'
-                : diff.inDays < 7
-                    ? '${diff.inDays}d ago'
-                    : item.createdAt.toString().substring(0, 10);
+        ? '${diff.inMinutes}m ago'
+        : diff.inDays < 1
+        ? '${diff.inHours}h ago'
+        : diff.inDays < 7
+        ? '${diff.inDays}d ago'
+        : item.createdAt.toString().substring(0, 10);
 
     return Dismissible(
       key: Key(item.id),
@@ -357,7 +364,11 @@ class _HistoryCard extends StatelessWidget {
           color: AppColors.errorRed.withOpacity(0.12),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(CupertinoIcons.trash, color: AppColors.errorRed, size: 20),
+        child: const Icon(
+          CupertinoIcons.trash,
+          color: AppColors.errorRed,
+          size: 20,
+        ),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
@@ -373,7 +384,10 @@ class _HistoryCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: actionColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(6),
@@ -390,7 +404,10 @@ class _HistoryCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 if (!item.success)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.errorRed.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -437,7 +454,11 @@ class _HistoryCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(CupertinoIcons.doc_on_clipboard, size: 13, color: onSurface.withOpacity(0.5)),
+                      Icon(
+                        CupertinoIcons.doc_on_clipboard,
+                        size: 13,
+                        color: onSurface.withOpacity(0.5),
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Copy',
