@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/auth_screen.dart';
 import '../../features/editor/screens/editor.dart';
+import '../../features/settings/screens/settings_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authListenable = _AuthListenable(ref);
@@ -32,6 +33,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/editor',
         name: 'editor',
         builder: (_, __) => const EditorScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (_, __) => const SettingsScreen(),
       ),
     ],
     errorBuilder: (_, state) => Scaffold(

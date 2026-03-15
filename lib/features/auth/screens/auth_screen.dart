@@ -81,9 +81,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final isLogin = _mode == _AuthMode.login;
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.white,
       child: Material(
-        color: AppColors.white,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnim,
@@ -100,7 +99,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     const SizedBox(height: AppSpacing.xxl),
                     Text(
                       isLogin ? 'Welcome back.' : 'Create account.',
-                      style: AppTextStyles.displayLarge,
+                      style: AppTextStyles.displayLarge.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
@@ -108,7 +109,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           ? 'Sign in to manage your XRay configs'
                           : 'Join to start building configs',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.grey600,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxl),
@@ -136,7 +139,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           _obscurePassword
                               ? CupertinoIcons.eye
                               : CupertinoIcons.eye_slash,
-                          color: AppColors.grey400,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
                           size: 20,
                         ),
                       ),
@@ -172,7 +177,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         child: RichText(
                           text: TextSpan(
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.grey600,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.5),
                             ),
                             children: [
                               TextSpan(
@@ -183,7 +190,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                               TextSpan(
                                 text: isLogin ? 'Sign up' : 'Sign in',
                                 style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.black,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -218,6 +227,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           style: AppTextStyles.caption.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -228,7 +238,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             keyboardType: keyboardType,
             obscureText: obscureText,
             maxLines: 1,
-            style: AppTextStyles.bodyLarge,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             validator: validator,
             decoration: InputDecoration(
               suffixIcon: suffix != null
@@ -242,7 +254,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 minHeight: 52,
               ),
               hintStyle: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.grey400,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.35),
               ),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.md,
@@ -312,12 +326,12 @@ class _SubmitButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               )
             : Text(label),

@@ -12,5 +12,5 @@ void main() async {
     ),
   );
 
-  runApp(buildApp());
+  runApp(await buildApp());
 }

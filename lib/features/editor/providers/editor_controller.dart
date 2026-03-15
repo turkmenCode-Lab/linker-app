@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -181,7 +182,7 @@ class EditorController extends StateNotifier<EditorState> {
     state = state.copyWith(activeTab: tab, clearApiError: true);
   }
 
-  Future<void> convertLinkToConfig(String link) async {
+  Future<void> convertLinkToConfig(String link, {bool autoCopy = true}) async {
     state = state.copyWith(
       operation: EditorOperation.converting,
       clearApiError: true,
@@ -192,6 +193,12 @@ class EditorController extends StateNotifier<EditorState> {
         data: {'link': link.trim()},
       );
       loadJson(res.data as Map<String, dynamic>);
+      if (autoCopy) {
+        final formatted = const JsonEncoder.withIndent(
+          '  ',
+        ).convert(res.data as Map<String, dynamic>);
+        await Clipboard.setData(ClipboardData(text: formatted));
+      }
       state = state.copyWith(
         operation: EditorOperation.idle,
         activeTab: EditorTab.editor,
@@ -219,7 +226,6 @@ class EditorController extends StateNotifier<EditorState> {
       state = state.copyWith(
         operation: EditorOperation.idle,
         link: res.data['link'] as String,
-        activeTab: EditorTab.linkConverter,
       );
     } on DioException catch (e) {
       state = state.copyWith(

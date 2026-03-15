@@ -18,6 +18,7 @@ dependencies:
   shared_preferences:
   re_editor:
   re_highlight:
+  google_fonts: ^8.0.2
 
 dev_dependencies:
   flutter_test:

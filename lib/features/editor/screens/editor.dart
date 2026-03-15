@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/editor_controller.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../settings/providers/settings_provider.dart';
 
 class EditorScreen extends ConsumerStatefulWidget {
   const EditorScreen({super.key});
@@ -46,72 +45,200 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(editorControllerProvider);
     final ctrl = ref.read(editorControllerProvider.notifier);
+    final s = ref.watch(stringsProvider);
 
     ref.listen(editorControllerProvider, (_, next) {
       _syncFromState(next.rawJson);
     });
 
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        backgroundColor: AppColors.white.withOpacity(0.92),
-        border: const Border(
-          bottom: BorderSide(color: AppColors.grey200, width: 0.5),
-        ),
-        middle: Text('linker', style: AppTextStyles.titleMedium),
-        leading: _StatusIndicator(
-          isValid: state.isValid,
-          isDirty: state.isDirty,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              onPressed: () => _showSettings(context),
-              child: const Icon(
-                CupertinoIcons.ellipsis_circle,
-                color: AppColors.black,
-                size: 22,
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+    final divColor = Theme.of(context).dividerColor;
+
+    return Scaffold(
+      backgroundColor: scaffoldBg,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(64),
+        child: Container(
+          decoration: BoxDecoration(
+            color: scaffoldBg.withOpacity(0.92),
+            border: Border(bottom: BorderSide(color: divColor, width: 0.5)),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: 64,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 88,
+                      child: _StatusIndicator(
+                        isValid: state.isValid,
+                        isDirty: state.isDirty,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'linker',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    SizedBox(
+                      width: 88,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => context.push('/settings'),
+                            child: Icon(
+                              CupertinoIcons.settings,
+                              color: onSurface,
+                              size: 22,
+                            ),
+                          ),
+                          CupertinoButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () => _showSettings(context),
+                            child: Icon(
+                              CupertinoIcons.ellipsis_circle,
+                              color: onSurface,
+                              size: 24,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
-      child: Material(
-        color: AppColors.white,
-        child: SafeArea(
+      body: Column(
+        children: [
+          _TabBar(activeTab: state.activeTab, onTabChanged: ctrl.switchTab),
+          if (state.apiError != null)
+            _ApiErrorBanner(
+              error: state.apiError!,
+              onDismiss: () => ctrl.switchTab(state.activeTab),
+            ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: switch (state.activeTab) {
+                EditorTab.editor => _EditorPanel(
+                  key: const ValueKey('editor'),
+                  controller: _jsonCtrl,
+                  state: state,
+                  editorCtrl: ctrl,
+                ),
+                EditorTab.linkConverter => _LinkConverterPanel(
+                  key: const ValueKey('converter'),
+                  linkCtrl: _linkCtrl,
+                  state: state,
+                  editorCtrl: ctrl,
+                ),
+                EditorTab.bulkImport => _BulkImportPanel(
+                  key: const ValueKey('bulk'),
+                  bulkCtrl: _bulkCtrl,
+                  state: state,
+                  editorCtrl: ctrl,
+                ),
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSettings(BuildContext context) {
+    final s = ref.read(stringsProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.darkSurface : AppColors.white;
+    final textColor = isDark ? AppColors.darkText : AppColors.black;
+    final divColor = isDark ? AppColors.darkDivider : AppColors.grey200;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              _TabBar(activeTab: state.activeTab, onTabChanged: ctrl.switchTab),
-              if (state.apiError != null)
-                _ApiErrorBanner(
-                  error: state.apiError!,
-                  onDismiss: () => ctrl.switchTab(state.activeTab),
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: textColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  child: switch (state.activeTab) {
-                    EditorTab.editor => _EditorPanel(
-                      key: const ValueKey('editor'),
-                      controller: _jsonCtrl,
-                      state: state,
-                      editorCtrl: ctrl,
-                    ),
-                    EditorTab.linkConverter => _LinkConverterPanel(
-                      key: const ValueKey('converter'),
-                      linkCtrl: _linkCtrl,
-                      state: state,
-                      editorCtrl: ctrl,
-                    ),
-                    EditorTab.bulkImport => _BulkImportPanel(
-                      key: const ValueKey('bulk'),
-                      bulkCtrl: _bulkCtrl,
-                      state: state,
-                      editorCtrl: ctrl,
-                    ),
-                  },
+              ),
+              Padding(
+                padding: const EdgeInsets.only(
+                  bottom: AppSpacing.sm,
+                  left: AppSpacing.md,
+                  right: AppSpacing.md,
                 ),
+                child: Text(
+                  s.options,
+                  style: AppTextStyles.titleMedium.copyWith(color: textColor),
+                ),
+              ),
+              Divider(color: divColor, height: 1),
+              _SheetAction(
+                label: s.formatJson,
+                icon: CupertinoIcons.textformat,
+                textColor: textColor,
+                divColor: divColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(editorControllerProvider.notifier).formatJson();
+                },
+              ),
+              _SheetAction(
+                label: s.minifyJson,
+                icon: CupertinoIcons.minus,
+                textColor: textColor,
+                divColor: divColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(editorControllerProvider.notifier).minifyJson();
+                },
+              ),
+              _SheetAction(
+                label: s.clearEditor,
+                icon: CupertinoIcons.trash,
+                textColor: AppColors.errorRed,
+                divColor: divColor,
+                onTap: () {
+                  Navigator.pop(context);
+                  ref.read(editorControllerProvider.notifier).clearEditor();
+                },
+              ),
+              _SheetAction(
+                label: s.signOut,
+                icon: CupertinoIcons.square_arrow_left,
+                textColor: AppColors.errorRed,
+                divColor: Colors.transparent,
+                onTap: () async {
+                  Navigator.pop(context);
+                  await ref.read(authProvider.notifier).logout();
+                  if (mounted) context.go('/auth');
+                },
               ),
             ],
           ),
@@ -119,90 +246,47 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       ),
     );
   }
-
-  void _showSettings(BuildContext context) {
-    showCupertinoModalPopup(
-      context: context,
-      builder: (_) => CupertinoActionSheet(
-        title: Text('Options', style: AppTextStyles.titleMedium),
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(editorControllerProvider.notifier).formatJson();
-            },
-            child: const Text('Format JSON'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(editorControllerProvider.notifier).minifyJson();
-            },
-            child: const Text('Minify JSON'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(editorControllerProvider.notifier).clearEditor();
-            },
-            isDestructiveAction: true,
-            child: const Text('Clear Editor'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(authProvider.notifier).logout();
-              if (mounted) context.go('/auth');
-            },
-            isDestructiveAction: true,
-            child: const Text('Sign Out'),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-      ),
-    );
-  }
 }
 
-class _TabBar extends StatelessWidget {
+class _TabBar extends ConsumerWidget {
   final EditorTab activeTab;
   final void Function(EditorTab) onTabChanged;
 
   const _TabBar({required this.activeTab, required this.onTabChanged});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     return Container(
-      color: AppColors.white,
+      color: Theme.of(context).scaffoldBackgroundColor,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.grey100,
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
           borderRadius: BorderRadius.circular(10),
         ),
         padding: const EdgeInsets.all(2),
         child: Row(
           children: [
             _Tab(
-              label: 'Editor',
+              label: s.editor,
               icon: CupertinoIcons.doc_text,
               isActive: activeTab == EditorTab.editor,
               onTap: () => onTabChanged(EditorTab.editor),
             ),
             _Tab(
-              label: 'Convert',
+              label: s.convert,
               icon: CupertinoIcons.arrow_right_arrow_left,
               isActive: activeTab == EditorTab.linkConverter,
               onTap: () => onTabChanged(EditorTab.linkConverter),
             ),
             _Tab(
-              label: 'Bulk',
+              label: s.bulk,
               icon: CupertinoIcons.square_stack,
               isActive: activeTab == EditorTab.bulkImport,
               onTap: () => onTabChanged(EditorTab.bulkImport),
@@ -236,12 +320,16 @@ class _Tab extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.white : Colors.transparent,
+            color: isActive
+                ? Theme.of(context).colorScheme.surface
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: AppColors.black.withOpacity(0.08),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.08),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -254,13 +342,19 @@ class _Tab extends StatelessWidget {
               Icon(
                 icon,
                 size: 14,
-                color: isActive ? AppColors.black : AppColors.grey400,
+                color: isActive
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.35),
               ),
               const SizedBox(width: 4),
               Text(
                 label,
                 style: AppTextStyles.caption.copyWith(
-                  color: isActive ? AppColors.black : AppColors.grey400,
+                  color: isActive
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.35),
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
@@ -294,12 +388,14 @@ class _EditorPanel extends ConsumerWidget {
           child: Container(
             margin: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.grey100,
+              color: Theme.of(
+                context,
+              ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: state.jsonError != null
                     ? AppColors.errorRed.withOpacity(0.3)
-                    : AppColors.grey200,
+                    : Theme.of(context).dividerColor,
               ),
             ),
             child: ClipRRect(
@@ -310,7 +406,9 @@ class _EditorPanel extends ConsumerWidget {
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
-                style: AppTextStyles.mono,
+                style: AppTextStyles.mono.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 keyboardType: TextInputType.multiline,
                 decoration: InputDecoration(
                   fillColor: Colors.transparent,
@@ -322,7 +420,9 @@ class _EditorPanel extends ConsumerWidget {
                   hintText:
                       '{\n  "remarks": "My Server",\n  "outbounds": []\n}',
                   hintStyle: AppTextStyles.mono.copyWith(
-                    color: AppColors.grey400,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.35),
                   ),
                 ),
               ),
@@ -336,67 +436,85 @@ class _EditorPanel extends ConsumerWidget {
   }
 }
 
-class _EditorToolbar extends StatelessWidget {
+class _EditorToolbar extends ConsumerWidget {
   final EditorState state;
   final EditorController editorCtrl;
 
   const _EditorToolbar({required this.state, required this.editorCtrl});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: const BoxDecoration(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppColors.grey200, width: 0.5),
+          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
         ),
       ),
       child: Row(
         children: [
-          _ToolBtn(
-            icon: CupertinoIcons.arrow_uturn_left,
-            label: 'Undo',
-            enabled: state.canUndo,
-            onTap: editorCtrl.undo,
+          Expanded(
+            child: _ToolBtn(
+              icon: CupertinoIcons.arrow_uturn_left,
+              label: s.undo,
+              enabled: state.canUndo,
+              onTap: editorCtrl.undo,
+            ),
           ),
-          const SizedBox(width: AppSpacing.xs),
-          _ToolBtn(
-            icon: CupertinoIcons.arrow_uturn_right,
-            label: 'Redo',
-            enabled: state.canRedo,
-            onTap: editorCtrl.redo,
+          Expanded(
+            child: _ToolBtn(
+              icon: CupertinoIcons.arrow_uturn_right,
+              label: s.redo,
+              enabled: state.canRedo,
+              onTap: editorCtrl.redo,
+            ),
           ),
-          const Spacer(),
-          _ToolBtn(
-            icon: CupertinoIcons.textformat,
-            label: 'Format',
-            enabled: state.isValid,
-            onTap: editorCtrl.formatJson,
+          Expanded(
+            child: _ToolBtn(
+              icon: CupertinoIcons.textformat,
+              label: s.formatJson,
+              enabled: state.isValid,
+              onTap: editorCtrl.formatJson,
+            ),
           ),
-          const SizedBox(width: AppSpacing.xs),
-          _ToolBtn(
-            icon: CupertinoIcons.minus,
-            label: 'Minify',
-            enabled: state.isValid,
-            onTap: editorCtrl.minifyJson,
+          Expanded(
+            child: _ToolBtn(
+              icon: CupertinoIcons.minus,
+              label: s.minifyJson,
+              enabled: state.isValid,
+              onTap: editorCtrl.minifyJson,
+            ),
           ),
-          const SizedBox(width: AppSpacing.xs),
-          _ToolBtn(
-            icon: CupertinoIcons.doc_on_clipboard,
-            label: 'Copy',
-            enabled: state.rawJson.isNotEmpty,
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: state.rawJson));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Copied to clipboard ✓'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+          Expanded(
+            child: _ToolBtn(
+              icon: CupertinoIcons.doc_on_clipboard,
+              label: s.copy,
+              enabled: state.rawJson.isNotEmpty,
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: state.rawJson));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(s.copied),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+          Expanded(
+            child: _ToolBtn(
+              icon: CupertinoIcons.doc_plaintext,
+              label: s.paste,
+              enabled: true,
+              onTap: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                if (data?.text != null) {
+                  editorCtrl.updateJson(data!.text!);
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -419,15 +537,38 @@ class _ToolBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: label,
-      child: CupertinoButton(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        onPressed: enabled ? onTap : null,
+    final color = Theme.of(context).colorScheme.onSurface;
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: SizedBox(
+        height: double.infinity,
         child: AnimatedOpacity(
-          opacity: enabled ? 1.0 : 0.3,
+          opacity: enabled ? 1.0 : 0.25,
           duration: const Duration(milliseconds: 150),
-          child: Icon(icon, size: 18, color: AppColors.black),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 17, color: color),
+              const SizedBox(height: 3),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w500,
+                    color: color,
+                    letterSpacing: 0.1,
+                    height: 1,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -465,18 +606,21 @@ class _JsonErrorBar extends StatelessWidget {
   }
 }
 
-class _ConvertToLinkBar extends StatelessWidget {
+class _ConvertToLinkBar extends ConsumerWidget {
   final EditorState state;
   final EditorController editorCtrl;
 
   const _ConvertToLinkBar({required this.state, required this.editorCtrl});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.grey200, width: 0.5)),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
+        ),
       ),
       child: Column(
         children: [
@@ -485,7 +629,9 @@ class _ConvertToLinkBar extends StatelessWidget {
               padding: const EdgeInsets.all(AppSpacing.md),
               margin: const EdgeInsets.only(bottom: AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.grey100,
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -493,7 +639,10 @@ class _ConvertToLinkBar extends StatelessWidget {
                   Expanded(
                     child: Text(
                       state.link!,
-                      style: AppTextStyles.mono.copyWith(fontSize: 11),
+                      style: AppTextStyles.mono.copyWith(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -504,10 +653,12 @@ class _ConvertToLinkBar extends StatelessWidget {
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: state.link!));
                     },
-                    child: const Icon(
+                    child: Icon(
                       CupertinoIcons.doc_on_clipboard,
                       size: 18,
-                      color: AppColors.grey600,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -519,16 +670,16 @@ class _ConvertToLinkBar extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: state.isBusy ? null : editorCtrl.convertConfigToLink,
               icon: state.operation == EditorOperation.converting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 16,
                       width: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : const Icon(CupertinoIcons.link, size: 16),
-              label: const Text('Export as Share Link'),
+              label: Text(s.exportAsLink),
             ),
           ),
         ],
@@ -537,7 +688,7 @@ class _ConvertToLinkBar extends StatelessWidget {
   }
 }
 
-class _LinkConverterPanel extends StatelessWidget {
+class _LinkConverterPanel extends ConsumerWidget {
   final TextEditingController linkCtrl;
   final EditorState state;
   final EditorController editorCtrl;
@@ -550,28 +701,41 @@ class _LinkConverterPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Paste a share link', style: AppTextStyles.titleMedium),
+          Text(
+            s.pasteLink,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Supports vless://, vmess://, trojan://, ss://, hysteria2://',
-            style: AppTextStyles.caption,
+            s.supportedProtocols,
+            style: AppTextStyles.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: linkCtrl,
-            style: AppTextStyles.mono.copyWith(fontSize: 13),
+            style: AppTextStyles.mono.copyWith(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'vless://uuid@host:443?...',
               hintStyle: AppTextStyles.mono.copyWith(
                 fontSize: 13,
-                color: AppColors.grey400,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withOpacity(0.35),
               ),
             ),
           ),
@@ -581,18 +745,24 @@ class _LinkConverterPanel extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: state.isBusy
                   ? null
-                  : () => editorCtrl.convertLinkToConfig(linkCtrl.text),
+                  : () {
+                      final autoCopy = ref.read(autoCopyProvider);
+                      editorCtrl.convertLinkToConfig(
+                        linkCtrl.text,
+                        autoCopy: autoCopy,
+                      );
+                    },
               icon: state.operation == EditorOperation.converting
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 16,
                       width: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : const Icon(CupertinoIcons.arrow_right, size: 16),
-              label: const Text('Convert to Config'),
+              label: Text(s.convertToConfig),
             ),
           ),
           const Spacer(),
@@ -620,11 +790,19 @@ class _SupportedProtocols extends StatelessWidget {
                 vertical: AppSpacing.xs,
               ),
               decoration: BoxDecoration(
-                color: AppColors.grey100,
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.grey200),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
-              child: Text(p, style: AppTextStyles.mono.copyWith(fontSize: 11)),
+              child: Text(
+                p,
+                style: AppTextStyles.mono.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
             ),
           )
           .toList(),
@@ -632,7 +810,7 @@ class _SupportedProtocols extends StatelessWidget {
   }
 }
 
-class _BulkImportPanel extends StatelessWidget {
+class _BulkImportPanel extends ConsumerWidget {
   final TextEditingController bulkCtrl;
   final EditorState state;
   final EditorController editorCtrl;
@@ -645,23 +823,34 @@ class _BulkImportPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Bulk import links', style: AppTextStyles.titleMedium),
+          Text(
+            s.bulkImportTitle,
+            style: AppTextStyles.titleMedium.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'One link per line — bad ones get flagged, no drama',
-            style: AppTextStyles.caption,
+            s.bulkImportSubtitle,
+            style: AppTextStyles.caption.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Expanded(
             child: TextField(
               controller: bulkCtrl,
-              style: AppTextStyles.mono.copyWith(fontSize: 12),
+              style: AppTextStyles.mono.copyWith(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               maxLines: null,
               expands: true,
               textAlignVertical: TextAlignVertical.top,
@@ -669,7 +858,9 @@ class _BulkImportPanel extends StatelessWidget {
                 hintText: 'vless://...\nvmess://...\ntrojan://...',
                 hintStyle: AppTextStyles.mono.copyWith(
                   fontSize: 12,
-                  color: AppColors.grey400,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.35),
                 ),
               ),
             ),
@@ -691,16 +882,16 @@ class _BulkImportPanel extends StatelessWidget {
                       editorCtrl.bulkImportLinks(links);
                     },
               icon: state.operation == EditorOperation.importing
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 16,
                       width: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: AppColors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     )
                   : const Icon(CupertinoIcons.square_stack, size: 16),
-              label: const Text('Import All'),
+              label: Text(s.importAll),
             ),
           ),
         ],
@@ -709,29 +900,32 @@ class _BulkImportPanel extends StatelessWidget {
   }
 }
 
-class _ImportResultCard extends StatelessWidget {
+class _ImportResultCard extends ConsumerWidget {
   final ImportResult result;
   const _ImportResultCard({required this.result});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     return Container(
       margin: const EdgeInsets.only(top: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.grey100,
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           _StatChip(
-            label: 'Imported',
+            label: s.imported,
             count: result.imported.length,
             color: AppColors.successGreen,
           ),
           const SizedBox(width: AppSpacing.md),
           _StatChip(
-            label: 'Failed',
+            label: s.failed,
             count: result.failed.length,
             color: AppColors.errorRed,
           ),
@@ -764,7 +958,9 @@ class _StatChip extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           '$count $label',
-          style: AppTextStyles.caption.copyWith(color: AppColors.black),
+          style: AppTextStyles.caption.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
       ],
     );
@@ -803,7 +999,7 @@ class _StatusIndicator extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: !isDirty
-                  ? AppColors.grey400
+                  ? Theme.of(context).colorScheme.onSurface.withOpacity(0.35)
                   : isValid
                   ? AppColors.successGreen
                   : AppColors.errorRed,
@@ -858,14 +1054,66 @@ class _ApiErrorBanner extends StatelessWidget {
             padding: EdgeInsets.zero,
             minSize: 24,
             onPressed: onDismiss,
-            child: const Icon(
+            child: Icon(
               CupertinoIcons.xmark,
               size: 12,
-              color: AppColors.grey600,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SheetAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color textColor;
+  final Color divColor;
+  final VoidCallback onTap;
+
+  const _SheetAction({
+    required this.label,
+    required this.icon,
+    required this.textColor,
+    required this.divColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.md + 2,
+            ),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: textColor),
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  label,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (divColor != Colors.transparent)
+          Divider(
+            color: divColor,
+            height: 1,
+            indent: AppSpacing.lg + 20 + AppSpacing.md,
+          ),
+      ],
     );
   }
 }
