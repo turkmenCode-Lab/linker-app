@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../auth/services/auth_service.dart';
-import '../../../core/config/app_config.dart';
 
 class SubEntry {
   final String link;
@@ -26,6 +24,7 @@ class SubscriptionState {
   final int total;
   final int converted;
   final String url;
+  final String lastFetchedUrl;
 
   const SubscriptionState({
     this.status = SubStatus.idle,
@@ -34,6 +33,7 @@ class SubscriptionState {
     this.total = 0,
     this.converted = 0,
     this.url = '',
+    this.lastFetchedUrl = '',
   });
 
   bool get isBusy =>
@@ -48,6 +48,7 @@ class SubscriptionState {
     int? total,
     int? converted,
     String? url,
+    String? lastFetchedUrl,
     bool clearError = false,
   }) {
     return SubscriptionState(
@@ -57,6 +58,7 @@ class SubscriptionState {
       total: total ?? this.total,
       converted: converted ?? this.converted,
       url: url ?? this.url,
+      lastFetchedUrl: lastFetchedUrl ?? this.lastFetchedUrl,
     );
   }
 }
@@ -75,6 +77,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   Future<void> fetchAndConvert() async {
     final url = state.url.trim();
     if (url.isEmpty) return;
+    if (url == state.lastFetchedUrl && state.status == SubStatus.done) return;
 
     state = state.copyWith(
       status: SubStatus.fetching,
@@ -112,6 +115,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
         entries: entries,
         total: entries.length,
         converted: entries.length,
+        lastFetchedUrl: url,
       );
     } on DioException catch (e) {
       state = state.copyWith(status: SubStatus.error, error: _parseDioError(e));
@@ -124,12 +128,10 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
     final trimmed = raw.trim();
     List<String> lines;
 
-    // Try base64 decode first
     try {
       final decoded = utf8.decode(base64.decode(trimmed));
       lines = decoded.split(RegExp(r'\r?\n'));
     } catch (_) {
-      // Already plain text
       lines = trimmed.split(RegExp(r'\r?\n'));
     }
 
@@ -144,14 +146,6 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
         .map((l) => l.trim())
         .where((l) => protocols.any((p) => l.startsWith(p)))
         .toList();
-  }
-
-  String _extractName(String link, Map<String, dynamic> config) {
-    final remarks = config['remarks'];
-    if (remarks != null && remarks.toString().isNotEmpty) {
-      return Uri.decodeComponent(remarks.toString());
-    }
-    return _nameFromLink(link);
   }
 
   String _nameFromLink(String link) {

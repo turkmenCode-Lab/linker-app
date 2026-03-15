@@ -28,6 +28,7 @@ class EditorState {
   final bool isDirty;
   final List<String> history;
   final int historyIndex;
+  final String? lastConvertedJson;
 
   const EditorState({
     this.rawJson = '',
@@ -41,6 +42,7 @@ class EditorState {
     this.isDirty = false,
     this.history = const [],
     this.historyIndex = -1,
+    this.lastConvertedJson,
   });
 
   bool get isValid => jsonError == null && rawJson.isNotEmpty;
@@ -60,11 +62,13 @@ class EditorState {
     bool? isDirty,
     List<String>? history,
     int? historyIndex,
+    String? lastConvertedJson,
     bool clearJsonError = false,
     bool clearApiError = false,
     bool clearParsed = false,
     bool clearLink = false,
     bool clearImport = false,
+    bool clearLastConverted = false,
   }) {
     return EditorState(
       rawJson: rawJson ?? this.rawJson,
@@ -80,6 +84,9 @@ class EditorState {
       isDirty: isDirty ?? this.isDirty,
       history: history ?? this.history,
       historyIndex: historyIndex ?? this.historyIndex,
+      lastConvertedJson: clearLastConverted
+          ? null
+          : lastConvertedJson ?? this.lastConvertedJson,
     );
   }
 }
@@ -98,6 +105,7 @@ class EditorController extends StateNotifier<EditorState> {
         rawJson: raw,
         clearParsed: true,
         clearJsonError: true,
+        clearLastConverted: true,
         isDirty: false,
       );
       return;
@@ -213,6 +221,8 @@ class EditorController extends StateNotifier<EditorState> {
 
   Future<void> convertConfigToLink() async {
     if (state.parsedConfig == null) return;
+    final currentJson = jsonEncode(state.parsedConfig);
+    if (state.link != null && currentJson == state.lastConvertedJson) return;
     state = state.copyWith(
       operation: EditorOperation.converting,
       clearApiError: true,
@@ -226,6 +236,7 @@ class EditorController extends StateNotifier<EditorState> {
       state = state.copyWith(
         operation: EditorOperation.idle,
         link: res.data['link'] as String,
+        lastConvertedJson: currentJson,
       );
     } on DioException catch (e) {
       state = state.copyWith(
