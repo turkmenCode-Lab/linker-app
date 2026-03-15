@@ -249,9 +249,6 @@ class _FilterBar extends StatelessWidget {
 
     return Container(
       height: 44,
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: divColor, width: 0.5)),
-      ),
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(

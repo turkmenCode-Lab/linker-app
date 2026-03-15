@@ -154,11 +154,6 @@ class _UrlBar extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
-        ),
-      ),
       child: Row(
         children: [
           Expanded(
