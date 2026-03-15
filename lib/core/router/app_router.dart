@@ -5,6 +5,9 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/auth_screen.dart';
 import '../../features/editor/screens/editor.dart';
 import '../../features/settings/screens/settings_screen.dart';
+import '../../features/subscription/screens/subscription_screen.dart';
+import '../../features/history/screens/history_screen.dart';
+import '../../shared/widgets/app_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authListenable = _AuthListenable(ref);
@@ -29,22 +32,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'auth',
         builder: (_, __) => const AuthScreen(),
       ),
-      GoRoute(
-        path: '/editor',
-        name: 'editor',
-        builder: (_, __) => const EditorScreen(),
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (_, __) => const SettingsScreen(),
+      ShellRoute(
+        builder: (context, state, child) =>
+            AppShell(location: state.matchedLocation, child: child),
+        routes: [
+          GoRoute(
+            path: '/editor',
+            name: 'editor',
+            builder: (_, __) => const EditorScreen(),
+          ),
+          GoRoute(
+            path: '/subscription',
+            name: 'subscription',
+            builder: (_, __) => const SubscriptionScreen(),
+          ),
+          GoRoute(
+            path: '/history',
+            name: 'history',
+            builder: (_, __) => const HistoryScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (_, __) => const SettingsScreen(),
+          ),
+        ],
       ),
     ],
-    errorBuilder: (_, state) => Scaffold(
-      body: Center(
-        child: Text('404 — that route does not exist fam: ${state.error}'),
-      ),
-    ),
+    errorBuilder: (_, state) =>
+        Scaffold(body: Center(child: Text('404 — ${state.error}'))),
   );
 });
 

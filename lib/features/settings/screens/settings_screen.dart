@@ -40,15 +40,7 @@ class SettingsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
                 child: Row(
                   children: [
-                    CupertinoButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => context.pop(),
-                      child: Icon(
-                        CupertinoIcons.chevron_left,
-                        color: textColor,
-                        size: 22,
-                      ),
-                    ),
+                    const SizedBox(width: 44),
                     const Spacer(),
                     Text(
                       s.settings,

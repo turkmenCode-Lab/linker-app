@@ -20,6 +20,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   final _passwordCtrl = TextEditingController();
   final _ageCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _ageFocusNode = FocusNode();
+  bool _ageFocused = false;
 
   _AuthMode _mode = _AuthMode.login;
   bool _obscurePassword = true;
@@ -35,6 +37,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut);
     _animCtrl.forward();
+    _ageFocusNode.addListener(() {
+      setState(() => _ageFocused = _ageFocusNode.hasFocus);
+    });
   }
 
   @override
@@ -42,6 +47,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _ageCtrl.dispose();
+    _ageFocusNode.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
@@ -80,129 +86,130 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final authState = ref.watch(authProvider);
     final isLogin = _mode == _AuthMode.login;
 
-    return CupertinoPageScaffold(
-      child: Material(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.xxl,
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSpacing.xxl),
-                    Text(
-                      isLogin ? 'Welcome back.' : 'Create account.',
-                      style: AppTextStyles.displayLarge.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        bottom: false,
+        child: FadeTransition(
+          opacity: _fadeAnim,
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.xxl,
+              AppSpacing.lg,
+              AppSpacing.xxl +
+                  (_ageFocused ? MediaQuery.of(context).viewInsets.bottom : 0),
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isLogin ? 'Welcome back.' : 'Create account.',
+                    style: AppTextStyles.displayLarge.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      isLogin
-                          ? 'Sign in to manage your XRay configs'
-                          : 'Join to start building configs',
-                      style: AppTextStyles.bodyMedium.copyWith(
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    isLogin
+                        ? 'Sign in to manage your XRay configs'
+                        : 'Join to start building configs',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  _buildField(
+                    controller: _emailCtrl,
+                    label: 'Email',
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Email is required';
+                      if (!v.contains('@')) return 'Enter a valid email';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildField(
+                    controller: _passwordCtrl,
+                    label: 'Password',
+                    obscureText: _obscurePassword,
+                    suffix: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      child: Icon(
+                        _obscurePassword
+                            ? CupertinoIcons.eye
+                            : CupertinoIcons.eye_slash,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.5),
+                        ).colorScheme.onSurface.withOpacity(0.4),
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xxl),
-                    _buildField(
-                      controller: _emailCtrl,
-                      label: 'Email',
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Email is required';
-                        if (!v.contains('@')) return 'Enter a valid email';
-                        return null;
-                      },
-                    ),
+                    validator: (v) {
+                      if (v == null || v.length < 6) {
+                        return 'Min 6 characters bestie';
+                      }
+                      return null;
+                    },
+                  ),
+                  if (!isLogin) ...[
                     const SizedBox(height: AppSpacing.md),
                     _buildField(
-                      controller: _passwordCtrl,
-                      label: 'Password',
-                      obscureText: _obscurePassword,
-                      suffix: CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
-                        child: Icon(
-                          _obscurePassword
-                              ? CupertinoIcons.eye
-                              : CupertinoIcons.eye_slash,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withOpacity(0.4),
-                          size: 20,
-                        ),
-                      ),
-                      validator: (v) {
-                        if (v == null || v.length < 6) {
-                          return 'Min 6 characters bestie';
-                        }
-                        return null;
-                      },
-                    ),
-                    if (!isLogin) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      _buildField(
-                        controller: _ageCtrl,
-                        label: 'Age (optional)',
-                        keyboardType: TextInputType.number,
-                      ),
-                    ],
-                    if (authState.error != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      _ErrorBanner(message: authState.error!),
-                    ],
-                    const SizedBox(height: AppSpacing.xl),
-                    _SubmitButton(
-                      label: isLogin ? 'Sign in' : 'Create account',
-                      isLoading: authState.isLoading,
-                      onPressed: _submit,
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Center(
-                      child: CupertinoButton(
-                        onPressed: _toggleMode,
-                        child: RichText(
-                          text: TextSpan(
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                            children: [
-                              TextSpan(
-                                text: isLogin
-                                    ? 'No account? '
-                                    : 'Already got one? ',
-                              ),
-                              TextSpan(
-                                text: isLogin ? 'Sign up' : 'Sign in',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      controller: _ageCtrl,
+                      label: 'Age (optional)',
+                      keyboardType: TextInputType.number,
+                      focusNode: _ageFocusNode,
                     ),
                   ],
-                ),
+                  if (authState.error != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _ErrorBanner(message: authState.error!),
+                  ],
+                  const SizedBox(height: AppSpacing.xl),
+                  _SubmitButton(
+                    label: isLogin ? 'Sign in' : 'Create account',
+                    isLoading: authState.isLoading,
+                    onPressed: _submit,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Center(
+                    child: CupertinoButton(
+                      onPressed: _toggleMode,
+                      child: RichText(
+                        text: TextSpan(
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          children: [
+                            TextSpan(
+                              text: isLogin
+                                  ? 'No account? '
+                                  : 'Already got one? ',
+                            ),
+                            TextSpan(
+                              text: isLogin ? 'Sign up' : 'Sign in',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -217,6 +224,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     TextInputType? keyboardType,
     bool obscureText = false,
     Widget? suffix,
+    FocusNode? focusNode,
     String? Function(String?)? validator,
   }) {
     return Column(
@@ -235,6 +243,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           height: 52,
           child: TextFormField(
             controller: controller,
+            focusNode: focusNode,
             keyboardType: keyboardType,
             obscureText: obscureText,
             maxLines: 1,

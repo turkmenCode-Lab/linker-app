@@ -58,7 +58,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     return Scaffold(
       backgroundColor: scaffoldBg,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(64),
+        preferredSize: const Size.fromHeight(56),
         child: Container(
           decoration: BoxDecoration(
             color: scaffoldBg.withOpacity(0.92),
@@ -67,17 +67,14 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           child: SafeArea(
             bottom: false,
             child: SizedBox(
-              height: 64,
+              height: 56,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Row(
                   children: [
-                    SizedBox(
-                      width: 88,
-                      child: _StatusIndicator(
-                        isValid: state.isValid,
-                        isDirty: state.isDirty,
-                      ),
+                    _StatusIndicator(
+                      isValid: state.isValid,
+                      isDirty: state.isDirty,
                     ),
                     const Spacer(),
                     Text(
@@ -88,30 +85,13 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                       ),
                     ),
                     const Spacer(),
-                    SizedBox(
-                      width: 88,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: () => context.push('/settings'),
-                            child: Icon(
-                              CupertinoIcons.settings,
-                              color: onSurface,
-                              size: 22,
-                            ),
-                          ),
-                          CupertinoButton(
-                            padding: EdgeInsets.zero,
-                            onPressed: () => _showSettings(context),
-                            child: Icon(
-                              CupertinoIcons.ellipsis_circle,
-                              color: onSurface,
-                              size: 24,
-                            ),
-                          ),
-                        ],
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _showSettings(context),
+                      child: Icon(
+                        CupertinoIcons.ellipsis_circle,
+                        color: onSurface,
+                        size: 22,
                       ),
                     ),
                   ],
@@ -1114,6 +1094,100 @@ class _SheetAction extends StatelessWidget {
             indent: AppSpacing.lg + 20 + AppSpacing.md,
           ),
       ],
+    );
+  }
+}
+
+class _BottomShell extends StatelessWidget {
+  final VoidCallback onSubscription;
+  final VoidCallback onSettings;
+  final VoidCallback onOptions;
+
+  const _BottomShell({
+    required this.onSubscription,
+    required this.onSettings,
+    required this.onOptions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final bg = Theme.of(context).scaffoldBackgroundColor;
+    final divColor = Theme.of(context).dividerColor;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(top: BorderSide(color: divColor, width: 0.5)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 52,
+          child: Row(
+            children: [
+              _ShellBtn(
+                icon: CupertinoIcons.antenna_radiowaves_left_right,
+                label: 'Sub',
+                onTap: onSubscription,
+                color: onSurface,
+              ),
+              _ShellBtn(
+                icon: CupertinoIcons.settings,
+                label: 'Settings',
+                onTap: onSettings,
+                color: onSurface,
+              ),
+              _ShellBtn(
+                icon: CupertinoIcons.ellipsis_circle,
+                label: 'Options',
+                onTap: onOptions,
+                color: onSurface,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShellBtn extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _ShellBtn({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w500,
+                color: color.withOpacity(0.6),
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

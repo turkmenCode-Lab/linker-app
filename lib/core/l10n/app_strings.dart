@@ -52,6 +52,9 @@ abstract class AppStrings {
   String get appearance;
   String get general;
   String get autoDetect;
+  String get history;
+  String get subscription;
+  String get subscriptionHint;
   String get autoCopy;
   String get autoCopySubtitle;
   String get undo;
@@ -107,6 +110,9 @@ class _En extends AppStrings {
   String get appearance => 'Appearance';
   String get general => 'General';
   String get autoDetect => 'Auto detect';
+  String get history => 'History';
+  String get subscription => 'Subscription';
+  String get subscriptionHint => 'Paste a subscription URL above and tap fetch';
   String get autoCopy => 'Auto Copy';
   String get autoCopySubtitle =>
       'Copy config to clipboard after link conversion';
@@ -163,6 +169,9 @@ class _Ru extends AppStrings {
   String get appearance => 'Внешний вид';
   String get general => 'Основное';
   String get autoDetect => 'Авто';
+  String get history => 'История';
+  String get subscription => 'Подписка';
+  String get subscriptionHint => 'Вставьте ссылку на подписку и нажмите кнопку';
   String get autoCopy => 'Авто-копирование';
   String get autoCopySubtitle => 'Копировать конфиг в буфер после конвертации';
   String get undo => 'Назад';
@@ -189,7 +198,7 @@ class _Tk extends AppStrings {
   String get passwordTooShort => 'Iň az 6 nyşan gerek';
   String get editor => 'Redaktor';
   String get convert => 'Öwür';
-  String get bulk => 'Uly';
+  String get bulk => 'Köpçülik';
   String get formatJson => 'Format';
   String get minifyJson => 'Gysga';
   String get clearEditor => 'Redaktory arassala';
@@ -200,7 +209,7 @@ class _Tk extends AppStrings {
   String get supportedProtocols =>
       'Goldanýar: vless://, vmess://, trojan://, ss://, hysteria2://';
   String get convertToConfig => 'Konfiga öwür';
-  String get bulkImportTitle => 'Uly import';
+  String get bulkImportTitle => 'Köpçülik import';
   String get bulkImportSubtitle =>
       'Her setirde bir salgy — ýalňyşlar belleniler';
   String get importAll => 'Hemmesini import et';
@@ -218,6 +227,9 @@ class _Tk extends AppStrings {
   String get appearance => 'Görnüş';
   String get general => 'Esasy';
   String get autoDetect => 'Awtomatik';
+  String get history => 'Taryh';
+  String get subscription => 'Abunalyk';
+  String get subscriptionHint => 'Abunalyk salgysyny goýuň we ýükläň';
   String get autoCopy => 'Awtomatik göçürme';
   String get autoCopySubtitle => 'Öwürmeden soň konfigi sahna göçür';
   String get undo => 'Yza';

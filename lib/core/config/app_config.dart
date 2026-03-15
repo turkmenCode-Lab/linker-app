@@ -19,4 +19,5 @@ class AppConfig {
   static String get proxyLinkToConfig => '$baseUrl/proxy/link-to-config';
   static String get proxyConfigToLink => '$baseUrl/proxy/config-to-link';
   static String get proxyBulkImport => '$baseUrl/proxy/bulk-import';
+  static String get history => '$baseUrl/history';
 }
